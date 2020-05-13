@@ -5,16 +5,16 @@
         <img src="../assets/logo.png" alt />
       </div>
 
-      <el-form :model="LoginForm" label-width="0px" class="login_form">
-        <el-form-item>
+      <el-form ref="LoginFormRef" :model="LoginForm"  :rules="LoginFormRules" label-width="0px" class="login_form">
+        <el-form-item prop="username">
           <el-input v-model="LoginForm.username" prefix-icon="el-icon-user"></el-input>
         </el-form-item>
-        <el-form-item>
+        <el-form-item prop="password">
           <el-input v-model="LoginForm.password" prefix-icon="el-icon-lock" type="password"></el-input>
         </el-form-item>
         <el-form-item class="btns">
-           <el-button type="primary">登陆</el-button>
-           <el-button type="info">重置</el-button>
+           <el-button type="primary" @click="login">登陆</el-button>
+           <el-button type="info" @click="resetLoginForm">重置</el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -28,7 +28,30 @@ export default {
       LoginForm: {
         username: 'soleperson',
         password: ''
+      },
+      LoginFormRules: {
+        username: [
+          { required: true, message: 'Input username', trigger: 'blur' },
+          { min: 6, message: '长度不少于6', trigger: 'blur' }
+        ],
+        password: [
+          { required: true, message: 'Input password', trigger: 'blur' },
+          { min: 6, message: '长度不少于6', trigger: 'blur' }
+        ]
       }
+    }
+  },
+  methods: {
+    resetLoginForm () {
+      this.$refs.LoginFormRef.resetFields()
+    },
+    login () {
+      this.$refs.LoginFormRef.validate(async (valid) => {
+        // eslint-disable-next-line no-useless-return
+        if (!valid) return
+        const { data: res } = await this.$http.post('login', this.LoginFormRef)
+        console.log(res)
+      })
     }
   }
 }
