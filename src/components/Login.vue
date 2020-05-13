@@ -26,17 +26,17 @@ export default {
   data () {
     return {
       LoginForm: {
-        username: 'soleperson',
-        password: ''
+        username: 'admin',
+        password: '123456'
       },
       LoginFormRules: {
         username: [
           { required: true, message: 'Input username', trigger: 'blur' },
-          { min: 6, message: '长度不少于6', trigger: 'blur' }
+          { min: 4, message: '长度不少于4', trigger: 'blur' }
         ],
         password: [
           { required: true, message: 'Input password', trigger: 'blur' },
-          { min: 6, message: '长度不少于6', trigger: 'blur' }
+          { min: 4, message: '长度不少于4', trigger: 'blur' }
         ]
       }
     }
@@ -49,8 +49,11 @@ export default {
       this.$refs.LoginFormRef.validate(async (valid) => {
         // eslint-disable-next-line no-useless-return
         if (!valid) return
-        const { data: res } = await this.$http.post('login', this.LoginFormRef)
-        console.log(res)
+        const { data: res } = await this.$http.post('login', this.LoginForm)
+        if (res.meta.status !== 200) return this.$message.error('登陆失败')
+        else this.$message.success('登陆成功')
+        window.sessionStorage.setItem('token', res.data.token)
+        this.$router.push('/home')
       })
     }
   }
