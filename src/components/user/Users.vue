@@ -9,12 +9,12 @@
     <el-card class="box-card">
       <el-row :gutter="20">
         <el-col :span="8">
-          <el-input placeholder="请输入内容">
-            <el-button slot="append" icon="el-icon-search"></el-button>
+          <el-input placeholder="请输入内容" v-model="queryInfo.query" clearable @clear="getUserList">
+            <el-button @click="getUserList" slot="append" icon="el-icon-search"></el-button>
           </el-input>
         </el-col>
         <el-col :span="4">
-          <el-button type="primary">添加用户</el-button>
+          <el-button type="primary" @click="addDialogVisible = true">添加用户</el-button>
         </el-col>
       </el-row>
       <el-row>
@@ -27,6 +27,7 @@
           <el-table-column label="状态">
             <template slot-scope="scope">
               <el-switch
+                @change="userStateChanged(scope.row)"
                 v-model="scope.row.mg_state"
                 active-color="#13ce66"
                 inactive-color="#ff4949"
@@ -53,6 +54,36 @@
           layout="total, sizes, prev, pager, next, jumper"
           :total="total"
         ></el-pagination>
+
+        <el-dialog
+          title="添加用户"
+          :visible.sync="addDialogVisible"
+          width="50%"
+          @close="addDialogClosed"
+        >
+          <span>
+            <template>
+              <el-form :model="addForm" :rules="addFormRules" ref="addFormRef" label-width="70px">
+                <el-form-item label="用户名" prop="username">
+                  <el-input v-model="addForm.username"></el-input>
+                </el-form-item>
+                <el-form-item label="密码" prop="password">
+                  <el-input v-model="addForm.password" type="password"></el-input>
+                </el-form-item>
+                <el-form-item label="邮箱" prop="email">
+                  <el-input v-model="addForm.email"></el-input>
+                </el-form-item>
+                <el-form-item label="手机" prop="mobile">
+                  <el-input v-model="addForm.mobile"></el-input>
+                </el-form-item>
+              </el-form>
+            </template>
+          </span>
+          <span slot="footer" class="dialog-footer">
+            <el-button @click="addDialogVisible = false">取 消</el-button>
+            <el-button type="primary" @click="addUser">确 定</el-button>
+          </span>
+        </el-dialog>
       </el-row>
     </el-card>
   </div>
@@ -61,6 +92,23 @@
 <script>
 export default {
   data() {
+    // eslint-disable-next-line no-unused-vars
+    var checkEmail = (rule, value, callback) => {
+      const regEmial = /^([a-zA-Z]|[0-9])(\w|-)+@[a-zA-Z0-9]+\.([a-zA-Z]{2,4})$/
+      if (regEmial.test(value)) {
+        return callback()
+      }
+      // eslint-disable-next-line no-undef
+      callback(new Error('邮箱不合法'))
+    }
+    // eslint-disable-next-line no-unused-vars
+    var checkMobile = (rule, value, callback) => {
+      const regMobile = /^1([38][0-9]|4[579]|5[0-3,5-9]|6[6]|7[0135678]|9[89])\d{8}$/
+      if (regMobile.test(value)) {
+        return callback()
+      }
+      callback(new Error('手机号不合法'))
+    }
     return {
       queryInfo: {
         query: '',
@@ -68,7 +116,42 @@ export default {
         pagesize: 2
       },
       userlist: [],
-      total: 0
+      total: 0,
+      addDialogVisible: false,
+      addForm: {
+        username: '',
+        password: '',
+        email: '',
+        mobile: ''
+      },
+      addFormRules: {
+        username: [
+          { required: true, message: '请输入用户名', trigger: 'blur' },
+          {
+            min: 3,
+            max: 10,
+            message: '用户名的长度在3~10之间',
+            trigger: 'blur'
+          }
+        ],
+        password: [
+          { required: true, message: '请输入密码', trigger: 'blur' },
+          {
+            min: 6,
+            max: 15,
+            message: '密码的长度在6~15之间',
+            trigger: 'blur'
+          }
+        ],
+        email: [
+          { required: true, message: '请输入邮箱', trigger: 'blur' },
+          { validator: checkEmail, trigger: 'blur' }
+        ],
+        mobile: [
+          { required: true, message: '请输入手机号', trigger: 'blur' },
+          { validator: checkMobile, trigger: 'blur' }
+        ]
+      }
     }
   },
   created() {
@@ -83,13 +166,45 @@ export default {
       this.userlist = res.data.users
       this.total = res.data.total
     },
+
     handleSizeChange(newSize) {
       this.queryInfo.pagesize = newSize
       this.getUserList()
     },
+
     handleCurrentChange(newPage) {
       this.queryInfo.pagenum = newPage
       this.getUserList()
+    },
+
+    async userStateChanged(userinfo) {
+      const { data: res } = await this.$http.put(
+        `users/${userinfo.id}/state/${userinfo.mg_state}`
+      )
+
+      if (res.meta.status !== 200) {
+        userinfo.mg_state = !userinfo.mg_state
+        return this.$message.error(res.meta.msg)
+      }
+      this.$message.success(res.meta.msg)
+    },
+
+    addDialogClosed() {
+      this.$refs.addFormRef.resetFields()
+    },
+
+    addUser() {
+      console.log(this.$refs.addFormRef)
+      this.$refs.addFormRef.validate(async valid => {
+        if (!valid) return this.$message.error('输入不合法')
+        const { data: res } = await this.$http.post('users', this.addForm)
+        if (res.meta.status !== 201) {
+          this.$message.error(res.meta.msg)
+        }
+        this.$message.success(res.meta.msg)
+        this.addDialogVisible = false
+        this.getUserList()
+      })
     }
   }
 }
